@@ -119,6 +119,8 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
 .tpf .field{min-width:0;text-align:center;font:700 22px var(--font-d);padding:0 4px}
 .tpf .pm{width:40px;height:46px;flex:none;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;font:700 20px var(--font-b);padding:0;cursor:pointer}
 .tpf .dg{font:600 16px var(--font-d);color:var(--muted)}
+.stk{position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:8;display:flex;justify-content:flex-end;pointer-events:none;margin:0 0 8px}
+.stk .btn{pointer-events:auto;min-width:130px;border-radius:23px;box-shadow:0 3px 12px rgba(0,0,0,.35)}
 @media (prefers-reduced-motion:reduce){.track i{transition:none}}
 </style>
 <style>html{-webkit-text-size-adjust:100%}body{margin:0}[hidden]{display:none!important}</style>
@@ -157,8 +159,8 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
 
     <section id="p-tasks" role="tabpanel" aria-labelledby="t-tasks" hidden>
       <p class="hint">Tick tasks off as you go. Add your own under each part of the night.</p>
-      <div class="actions" style="margin-bottom:12px"><button class="btn pri" id="reorderBtn">Reorder</button></div>
       <div id="taskList"></div>
+      <div class="stk"><button class="btn pri" id="reorderBtn">Reorder</button></div>
       <div class="actions"><button class="btn" id="clearTasks">Untick all</button></div>
     </section>
 
