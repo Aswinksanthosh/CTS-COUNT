@@ -114,6 +114,14 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
 .tpf .pm{width:40px;height:46px;flex:none;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;font:700 20px var(--font-b);padding:0;cursor:pointer}
 .tpf .dg{font:600 16px var(--font-d);color:var(--muted)}
 .task{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.hr{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.btn.sm{min-height:34px;padding:0 12px;font-size:13px}
+h1{min-width:0;overflow-wrap:anywhere}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:30;display:flex;align-items:flex-end}
+.sheet{background:var(--surface);width:100%;max-width:640px;margin:0 auto;border-radius:14px 14px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto}
+.stb{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:52px;margin-bottom:8px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:600 18px var(--font-b);cursor:pointer;text-align:left}
+.stb.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.stb small{font:600 12px var(--font-b);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
 @media (prefers-reduced-motion:reduce){.track i{transition:none}}
 </style>
 <style>html{-webkit-text-size-adjust:100%}body{margin:0}[hidden]{display:none!important}</style>
@@ -123,10 +131,10 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
   <header>
     <div class="top">
       <div>
-        <h1>Stand 3330</h1>
+        <h1 id="stName">Stand 3330</h1>
         <p class="sub">SensExpress · counts, waste, orders</p>
       </div>
-      <span class="date" id="date"></span>
+      <div class="hr"><span class="date" id="date"></span><button class="btn sm" id="chg" type="button">Change stand</button></div>
     </div>
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button class="tab" role="tab" id="t-count" data-tab="count" aria-selected="true">Count</button>
@@ -199,11 +207,31 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
     </div>
   </main>
 </div>
+<div class="ov" id="ov" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="Change stand">
+    <h2 class="ph">Change stand</h2>
+    <div id="stList"></div>
+    <form class="addf" id="stNew" style="padding:10px 0 0;border:0"><input class="field" id="stNewName" placeholder="New stand name" aria-label="New stand name" autocomplete="off"><button class="btn" type="submit">Add</button></form>
+    <p class="hint" style="margin:8px 0 0">A new stand copies this stand's items and tasks, with empty counts.</p>
+    <div class="actions" style="margin-top:10px"><button class="btn" id="ovClose" type="button">Close</button></div>
+  </div>
+</div>
 <datalist id="itemList"></datalist>
 
 <script>
 (function(){
-  var KEY='stand3326-v1';
+  var META_KEY='stand3326-meta';
+  var meta=(function(){
+    var m=null;
+    try{m=JSON.parse(localStorage.getItem(META_KEY)||'null')}catch(e){}
+    if(!m||!Array.isArray(m.stands)||!m.stands.length)m={cur:'main',stands:[{id:'main',name:'Stand 3330',key:'stand3326-v1'},{id:'pizza',name:'Pizza 3381',key:'stand3326-pizza'}]};
+    if(!m.stands.some(function(x){return x.id===m.cur}))m.cur=m.stands[0].id;
+    return m;
+  })();
+  function saveMeta(){try{localStorage.setItem(META_KEY,JSON.stringify(meta))}catch(e){}}
+  var curStand=meta.stands.filter(function(x){return x.id===meta.cur})[0];
+  var KEY=curStand.key;
+  saveMeta();
   var $=function(s,r){return (r||document).querySelector(s)};
   var esc=function(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
   var uid=function(){return Math.random().toString(36).slice(2,9)};
@@ -357,7 +385,7 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
     return i.k+': '+parts[0];
   }
   function countText(){
-    var out=['Count · '+today()];
+    var out=['Count · '+curStand.name+' · '+today()];
     GROUPS.forEach(function(g){
       var ls=S.items.filter(function(i){return i.g===g.id&&tot(i)!=null}).map(line);
       if(ls.length){out.push('',g.t+':');ls.forEach(function(l){out.push(l)})}
@@ -486,10 +514,49 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
   tpl.addEventListener('focusin',function(e){if(e.target.tagName==='INPUT')e.target.select()});
   function tv(v){return v===''?'--':v+'\u00b0C'}
   function tempsText(){
-    var out=['Temps \u00b7 '+today()];
+    var out=['Temps \u00b7 '+curStand.name+' \u00b7 '+today()];
     TEMPS.forEach(function(r){out.push(r.t+': opening '+tv(S.temps[r.o])+', closing '+tv(S.temps[r.c]))});
     return out.join('\n');
   }
+
+  /* ---------- Stands ---------- */
+  $('#stName').textContent=curStand.name;
+  document.title=curStand.name+' Counter';
+  function cloneFresh(){
+    var c=JSON.parse(JSON.stringify(S));
+    c.items.forEach(function(i){i.f='';i.m='';i.b=''});
+    c.tasks.forEach(function(t){t.done=false});
+    c.wasteText=WASTE_TPL;c.orderText=ORDER_TPL;c.notes='';
+    c.temps={fo:'',fc:'',zo:'',zc:''};c.orderDate=tomorrow();c.edit=false;
+    return c;
+  }
+  function goStand(id){
+    var st=meta.stands.filter(function(x){return x.id===id})[0];if(!st)return;
+    if(id===meta.cur){$('#ov').hidden=true;return}
+    save();
+    var has=false;
+    try{has=!!localStorage.getItem(st.key)}catch(e){}
+    if(!has){try{localStorage.setItem(st.key,JSON.stringify(cloneFresh()))}catch(e){}}
+    meta.cur=id;saveMeta();
+    location.reload();
+  }
+  function renderStands(){
+    $('#stList').innerHTML=meta.stands.map(function(x){
+      var on=x.id===meta.cur;
+      return '<button class="stb'+(on?' on':'')+'" type="button" data-id="'+x.id+'"><span>'+esc(x.name)+'</span>'+(on?'<small>Current</small>':'')+'</button>';
+    }).join('');
+  }
+  $('#chg').addEventListener('click',function(){renderStands();$('#ov').hidden=false});
+  $('#ovClose').addEventListener('click',function(){$('#ov').hidden=true});
+  $('#ov').addEventListener('click',function(e){if(e.target.id==='ov')$('#ov').hidden=true});
+  $('#stList').addEventListener('click',function(e){var b=e.target.closest('.stb');if(b)goStand(b.dataset.id)});
+  $('#stNew').addEventListener('submit',function(e){
+    e.preventDefault();
+    var n=$('#stNewName').value.trim();if(!n)return;
+    var id=uid();
+    meta.stands.push({id:id,name:n,key:'stand3326-'+id});
+    saveMeta();goStand(id);
+  });
 
   /* ---------- Notes ---------- */
   $('#notes').value=S.notes;
