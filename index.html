@@ -240,15 +240,13 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
         D('sheet','Poppacorn bulk bag','Poppacorn','bulk bag'),
         D('sheet','Vizzy Orange Cream','Vizzy','473 ml can · 24 pack'),
         D('sheet','Pretzels','Pretzels','Slush Puppie king size · each'),
-        D('sheet','Vizzy Blueberry Pom','Blueberry','473 ml can · 24 pack'),
-        D('sheet','Chicken tenders','Chicken','breaded cooked · bag'),
         D('drinks','Heineken'),D('drinks','Strongbow'),D('drinks','Twisted Tea'),D('drinks','Clamato'),
         D('drinks','Pepper'),D('drinks','Pepper Zero'),D('drinks','Canada Dry'),D('drinks','Crush'),
         D('drinks','Nestea'),D('drinks','Cola'),D('drinks','Coke Zero'),D('drinks','Diet'),D('drinks','Sprite'),
         D('supplies','Lids 24 transparent','Lids 24 transparent'),
         D('supplies','Lids 24 normal','Lids 24 normal')
       ],
-      wasteText:'Waste:\nPretzels: \nDogs: \n',orderText:'Ordering:\n',v:4,tasks:defTasks(),notes:'',orderDate:tomorrow(),edit:false
+      wasteText:'Waste:\nPretzels: \nDogs: \n',orderText:'Ordering:\n',v:5,tasks:defTasks(),notes:'',orderDate:tomorrow(),edit:false
     };
   }
   function load(){
@@ -256,13 +254,13 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
     try{
       var s=JSON.parse(localStorage.getItem(KEY)||'null');
       if(s&&Array.isArray(s.items)){
-        if(s.v===4){d.items=s.items}else{
+        if(s.v===5){d.items=s.items}else{
           var oldItems=s.items;
           d.items=d.items.filter(function(n){return n.g==='sheet'}).map(function(n){
             var o=oldItems.find(function(x){return x.g==='sheet'&&x.k===n.k});
             if(o){n.f=o.f;n.m=o.m||'';n.b=o.b}
             return n;
-          }).concat(oldItems.filter(function(x){return x.g==='sheet'&&!d.items.some(function(n){return n.g==='sheet'&&n.k===x.k})}),oldItems.filter(function(x){return x.g!=='sheet'}));
+          }).concat(oldItems.filter(function(x){return x.g==='sheet'&&x.k!=='Chicken'&&x.k!=='Blueberry'&&!d.items.some(function(n){return n.g==='sheet'&&n.k===x.k})}),oldItems.filter(function(x){return x.g!=='sheet'}));
         }
         d.waste=Array.isArray(s.waste)?s.waste:[];
         d.orders=Array.isArray(s.orders)?s.orders:[];
