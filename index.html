@@ -106,6 +106,13 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
 .task{display:flex;align-items:center;gap:10px;padding:8px 10px 8px 12px;border-top:1px solid var(--line);min-height:52px}
 .task .chk{padding:4px 0}
 .task.done .n{text-decoration:line-through;color:var(--muted)}
+.grip,.mv{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--bg);color:var(--muted);border-radius:8px;font:600 18px/1 var(--font-b);padding:0;flex:none}
+.grip{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.mv{cursor:pointer}
+.mv:disabled{opacity:.3}
+.task.rord .n{flex:1;min-width:0;overflow-wrap:anywhere;font-weight:600}
+.task.drag{opacity:.85;background:var(--soft);box-shadow:0 4px 14px rgba(0,0,0,.25);position:relative;z-index:2}
+.grp .nt{margin:0;padding:10px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--line)}
 @media (prefers-reduced-motion:reduce){.track i{transition:none}}
 </style>
 <style>html{-webkit-text-size-adjust:100%}body{margin:0}[hidden]{display:none!important}</style>
@@ -144,7 +151,7 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
     <section id="p-tasks" role="tabpanel" aria-labelledby="t-tasks" hidden>
       <p class="hint">Tick tasks off as you go. Add your own under each part of the night.</p>
       <div id="taskList"></div>
-      <div class="actions"><button class="btn" id="clearTasks">Untick all</button></div>
+      <div class="actions"><button class="btn pri" id="reorderBtn">Reorder</button><button class="btn" id="clearTasks">Untick all</button></div>
     </section>
 
     <section id="p-waste" role="tabpanel" aria-labelledby="t-waste" hidden>
@@ -376,13 +383,15 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
     $('#taskList').innerHTML=PHASES.map(function(p){
       var ts=S.tasks.filter(function(t){return t.p===p.id});
       var d=ts.filter(function(t){return t.done}).length;
-      return '<section class="grp"><div class="gh tg"><h2>'+p.t+'</h2><span class="pc">'+d+' / '+ts.length+'</span></div>'
+      return '<section class="grp" data-p="'+p.id+'"><div class="gh tg"><h2>'+p.t+'</h2><span class="pc">'+d+' / '+ts.length+'</span></div>'
         +(p.n?'<p class="pn">'+p.n+'</p>':'')
-        +ts.map(function(t){
+        +ts.map(function(t,ix){
+          if(S.reorder)return '<div class="task rord" data-id="'+t.id+'"><button class="grip" type="button" aria-label="Drag '+esc(t.text)+'">&#8942;&#8942;</button><span class="n">'+esc(t.text)+'</span><button class="mv up" type="button" aria-label="Move up"'+(ix===0?' disabled':'')+'>&#9650;</button><button class="mv dn" type="button" aria-label="Move down"'+(ix===ts.length-1?' disabled':'')+'>&#9660;</button></div>';
           return '<div class="task'+(t.done?' done':'')+'" data-id="'+t.id+'"><label class="chk"><input type="checkbox"'+(t.done?' checked':'')+'><span class="n">'+esc(t.text)+'</span></label><button class="rm" type="button" aria-label="Remove task">×</button></div>';
         }).join('')
-        +'<form class="addf" data-p="'+p.id+'"><input class="field" placeholder="Add a task" aria-label="Add a task to '+p.t+'" autocomplete="off"><button class="btn" type="submit">Add</button></form></section>';
+        +(S.reorder?'<p class="nt">Drag the dots, or use the arrows.</p>':'<form class="addf" data-p="'+p.id+'"><input class="field" placeholder="Add a task" aria-label="Add a task to '+p.t+'" autocomplete="off"><button class="btn" type="submit">Add</button></form>')+'</section>';
     }).join('');
+    $('#reorderBtn').textContent=S.reorder?'Done reordering':'Reorder';
   }
   var tl=$('#taskList');
   tl.addEventListener('change',function(e){
@@ -390,7 +399,15 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
     var t=S.tasks.find(function(x){return x.id===e.target.closest('.task').dataset.id});
     if(t){t.done=e.target.checked;save();renderTasks()}
   });
+  $('#reorderBtn').addEventListener('click',function(){S.reorder=!S.reorder;renderTasks()});
   tl.addEventListener('click',function(e){
+    var m=e.target.closest('.mv');
+    if(m){
+      var id0=m.closest('.task').dataset.id,i=S.tasks.findIndex(function(x){return x.id===id0}),ph=S.tasks[i].p,d=m.classList.contains('up')?-1:1,j=i+d;
+      while(j>=0&&j<S.tasks.length&&S.tasks[j].p!==ph)j+=d;
+      if(j>=0&&j<S.tasks.length){var tmp=S.tasks[i];S.tasks[i]=S.tasks[j];S.tasks[j]=tmp;save();renderTasks()}
+      return;
+    }
     var b=e.target.closest('.rm');if(!b)return;
     var id=b.closest('.task').dataset.id;
     S.tasks=S.tasks.filter(function(x){return x.id!==id});save();renderTasks();
@@ -400,6 +417,40 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
     var f=e.target,v=$('input',f).value.trim();if(!v)return;
     S.tasks.push({id:uid(),p:f.dataset.p,text:v,done:false});save();renderTasks();
   });
+
+  /* drag to reorder (works with touch and mouse) */
+  var drag=null;
+  tl.addEventListener('pointerdown',function(e){
+    var g=e.target.closest('.grip');if(!g)return;
+    e.preventDefault();
+    drag=g.closest('.task');drag.classList.add('drag');
+    try{g.setPointerCapture(e.pointerId)}catch(x){}
+  });
+  tl.addEventListener('pointermove',function(e){
+    if(!drag)return;
+    var el=document.elementFromPoint(e.clientX,e.clientY);if(!el)return;
+    var t=el.closest('.task');
+    if(t&&t!==drag){
+      var r=t.getBoundingClientRect();
+      t.parentNode.insertBefore(drag,e.clientY<r.top+r.height/2?t:t.nextSibling);
+    }else if(!t){
+      var gr=el.closest('.grp');
+      if(gr)gr.insertBefore(drag,gr.querySelector('.nt'));
+    }
+    if(e.clientY<80)window.scrollBy(0,-12);else if(e.clientY>innerHeight-80)window.scrollBy(0,12);
+  });
+  function endDrag(){
+    if(!drag)return;drag=null;
+    var byId={};S.tasks.forEach(function(t){byId[t.id]=t});
+    var out=[];
+    tl.querySelectorAll('.grp').forEach(function(gr){
+      gr.querySelectorAll('.task').forEach(function(el){var t=byId[el.dataset.id];if(t){t.p=gr.dataset.p;out.push(t)}});
+    });
+    if(out.length===S.tasks.length)S.tasks=out;
+    save();renderTasks();
+  }
+  tl.addEventListener('pointerup',endDrag);
+  tl.addEventListener('pointercancel',endDrag);
 
   /* ---------- Notes ---------- */
   $('#notes').value=S.notes;
