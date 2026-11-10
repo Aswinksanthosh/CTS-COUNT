@@ -40,7 +40,7 @@ h1{font:700 32px/1 var(--font-d);letter-spacing:.02em;text-transform:uppercase;m
 .sub{margin:4px 0 0;color:var(--muted);font-size:14px}
 .date{font:600 18px var(--font-d);letter-spacing:.04em;text-transform:uppercase;color:var(--accent);white-space:nowrap}
 .tabs{display:flex;gap:0;margin-top:10px;border-bottom:1px solid var(--line)}
-.tab{flex:1;min-height:46px;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:700 18px var(--font-d);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.tab{flex:1;min-height:46px;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:700 16px var(--font-d);letter-spacing:.02em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
 .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 .bd{font:700 12px var(--font-b);background:var(--accent);color:var(--accent-ink);border-radius:9px;min-width:18px;height:18px;padding:0 5px;display:inline-flex;align-items:center;justify-content:center;font-style:normal;letter-spacing:0}
 .bd:empty{display:none}
@@ -113,6 +113,12 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
 .task.rord .n{flex:1;min-width:0;overflow-wrap:anywhere;font-weight:600}
 .task.drag{opacity:.85;background:var(--soft);box-shadow:0 4px 14px rgba(0,0,0,.25);position:relative;z-index:2}
 .grp .nt{margin:0;padding:10px 12px;font-size:13px;color:var(--muted);border-top:1px solid var(--line)}
+.tp{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+.tp label{display:block;font:600 12px var(--font-b);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.tpf{display:flex;align-items:center;gap:6px}
+.tpf .field{min-width:0;text-align:center;font:700 22px var(--font-d);padding:0 4px}
+.tpf .pm{width:40px;height:46px;flex:none;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;font:700 20px var(--font-b);padding:0;cursor:pointer}
+.tpf .dg{font:600 16px var(--font-d);color:var(--muted)}
 @media (prefers-reduced-motion:reduce){.track i{transition:none}}
 </style>
 <style>html{-webkit-text-size-adjust:100%}body{margin:0}[hidden]{display:none!important}</style>
@@ -130,6 +136,7 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button class="tab" role="tab" id="t-count" data-tab="count" aria-selected="true">Count</button>
       <button class="tab" role="tab" id="t-tasks" data-tab="tasks" aria-selected="false">Tasks</button>
+      <button class="tab" role="tab" id="t-temps" data-tab="temps" aria-selected="false">Temps</button>
       <button class="tab" role="tab" id="t-waste" data-tab="waste" aria-selected="false">Waste</button>
       <button class="tab" role="tab" id="t-order" data-tab="order" aria-selected="false">Order</button>
       <button class="tab" role="tab" id="t-notes" data-tab="notes" aria-selected="false">Notes</button>
@@ -153,6 +160,16 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
       <div class="actions" style="margin-bottom:12px"><button class="btn pri" id="reorderBtn">Reorder</button></div>
       <div id="taskList"></div>
       <div class="actions"><button class="btn" id="clearTasks">Untick all</button></div>
+    </section>
+
+    <section id="p-temps" role="tabpanel" aria-labelledby="t-temps" hidden>
+      <h2 class="ph">Temperatures</h2>
+      <p class="hint">Type the reading in &deg;C. Tap &plusmn; for a minus number.</p>
+      <div id="tempList"></div>
+      <div class="actions">
+        <button class="btn pri" id="copyTemps">Copy temps</button>
+        <button class="btn" id="clearTemps">Clear temps</button>
+      </div>
     </section>
 
     <section id="p-waste" role="tabpanel" aria-labelledby="t-waste" hidden>
@@ -239,7 +256,7 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
         D('sheet','Vizzy Orange Cream','Vizzy','473 ml can · 24 pack'),
         D('sheet','Pretzels','Pretzels','Slush Puppie king size · each')
       ],
-      wasteText:'Waste:\nPretzels: \nDogs: \n',orderText:'Ordering:\n',v:6,tasks:defTasks(),notes:'',orderDate:tomorrow(),edit:false
+      wasteText:'Waste:\nPretzels: \nDogs: \n',orderText:'Ordering:\n',v:6,tasks:defTasks(),notes:'',temps:{fo:'',fc:'',zo:'',zc:''},orderDate:tomorrow(),edit:false
     };
   }
   function load(){
@@ -259,6 +276,7 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
         d.orders=Array.isArray(s.orders)?s.orders:[];
         d.notes=typeof s.notes==='string'?s.notes:'';
         if(s.orderDate)d.orderDate=s.orderDate;
+        if(s.temps&&typeof s.temps==='object'){['fo','fc','zo','zc'].forEach(function(k){if(typeof s.temps[k]==='string')d.temps[k]=s.temps[k]})}
         if(Array.isArray(s.tasks))d.tasks=s.tasks;
         if(typeof s.wasteText==='string')d.wasteText=s.wasteText;
         if(typeof s.orderText==='string')d.orderText=s.orderText;
@@ -445,6 +463,37 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
   tl.addEventListener('pointerup',endDrag);
   tl.addEventListener('pointercancel',endDrag);
 
+  /* ---------- Temps ---------- */
+  var TEMPS=[{t:'Fridge',o:'fo',c:'fc'},{t:'Freezer',o:'zo',c:'zc'}];
+  function tf(k,l){return '<div><label for="tp-'+k+'">'+l+'</label><div class="tpf"><button class="pm" type="button" data-k="'+k+'" aria-label="Plus or minus, '+l+'">&plusmn;</button><input class="field" id="tp-'+k+'" data-k="'+k+'" inputmode="decimal" autocomplete="off" value="'+esc(S.temps[k])+'" placeholder="0"><span class="dg">&deg;C</span></div></div>'}
+  function renderTemps(){
+    $('#tempList').innerHTML=TEMPS.map(function(r){
+      return '<section class="grp"><div class="gh tg"><h2>'+r.t+'</h2></div><div class="tp">'+tf(r.o,'Opening')+tf(r.c,'Closing')+'</div></section>';
+    }).join('');
+  }
+  var tpl=$('#tempList');
+  tpl.addEventListener('input',function(e){
+    var k=e.target.dataset.k;if(!k||e.target.tagName!=='INPUT')return;
+    var v=e.target.value.replace(/,/g,'.').replace(/[^0-9.\-]/g,'');
+    v=v.charAt(0)==='-'?'-'+v.slice(1).replace(/-/g,''):v.replace(/-/g,'');
+    v=v.slice(0,6);
+    if(v!==e.target.value)e.target.value=v;
+    S.temps[k]=v;save();
+  });
+  tpl.addEventListener('click',function(e){
+    var b=e.target.closest('.pm');if(!b)return;
+    var i=$('#tp-'+b.dataset.k),v=i.value;
+    i.value=v.charAt(0)==='-'?v.slice(1):'-'+v;
+    S.temps[b.dataset.k]=i.value;save();i.focus();
+  });
+  tpl.addEventListener('focusin',function(e){if(e.target.tagName==='INPUT')e.target.select()});
+  function tv(v){return v===''?'--':v+'\u00b0C'}
+  function tempsText(){
+    var out=['Temps \u00b7 '+today()];
+    TEMPS.forEach(function(r){out.push(r.t+': opening '+tv(S.temps[r.o])+', closing '+tv(S.temps[r.c]))});
+    return out.join('\n');
+  }
+
   /* ---------- Notes ---------- */
   $('#notes').value=S.notes;
   $('#notes').addEventListener('input',function(e){S.notes=e.target.value;save()});
@@ -460,6 +509,7 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
   $('#copyCount').addEventListener('click',function(e){copyText(countText(),e.currentTarget)});
   $('#copyWaste').addEventListener('click',function(e){copyText(wasteText(),e.currentTarget)});
   $('#copyOrder').addEventListener('click',function(e){copyText(orderText(),e.currentTarget)});
+  $('#copyTemps').addEventListener('click',function(e){copyText(tempsText(),e.currentTarget)});
   $('#copyNotes').addEventListener('click',function(e){copyText(S.notes||'',e.currentTarget)});
   function twoStep(id,fn){
     var b=$(id),t=null;
@@ -472,10 +522,11 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
   twoStep('#clearCount',function(){S.items.forEach(function(i){i.f='';i.m='';i.b=''});save();renderCount()});
   twoStep('#clearWaste',function(){S.wasteText=WASTE_TPL;$('#waste').value=S.wasteText;save()});
   twoStep('#clearOrder',function(){S.orderText=ORDER_TPL;$('#order').value=S.orderText;save()});
+  twoStep('#clearTemps',function(){S.temps={fo:'',fc:'',zo:'',zc:''};save();renderTemps()});
   twoStep('#clearTasks',function(){S.tasks.forEach(function(t){t.done=false});save();renderTasks()});
 
   /* ---------- Tabs ---------- */
-  var TABS=['count','tasks','waste','order','notes'];
+  var TABS=['count','tasks','temps','waste','order','notes'];
   function show(id){
     if(TABS.indexOf(id)<0)id='count';
     TABS.forEach(function(t){
@@ -491,7 +542,7 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
   window.addEventListener('hashchange',function(){show(location.hash.slice(1))});
 
   $('#date').textContent=today();
-  renderCount();renderTasks();
+  renderCount();renderTasks();renderTemps();
   show(location.hash.slice(1));
 })();
 </script>
