@@ -198,9 +198,7 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
   var uid=function(){return Math.random().toString(36).slice(2,9)};
   var pad=function(n){return String(n).padStart(2,'0')};
   var GROUPS=[
-    {id:'sheet',t:'Stand sheet items'},
-    {id:'drinks',t:'Other drinks'},
-    {id:'supplies',t:'Supplies'}
+    {id:'sheet',t:'Stand sheet items'}
   ];
   function D(g,name,k,u){return {id:uid(),g:g,name:name,k:k||name,u:u||'',f:'',m:'',b:''}}
   function tomorrow(){var d=new Date();d.setDate(d.getDate()+1);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
@@ -239,14 +237,9 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
         D('sheet','Coors Light','Light','473 ml can · 24 pack'),
         D('sheet','Poppacorn bulk bag','Poppacorn','bulk bag'),
         D('sheet','Vizzy Orange Cream','Vizzy','473 ml can · 24 pack'),
-        D('sheet','Pretzels','Pretzels','Slush Puppie king size · each'),
-        D('drinks','Heineken'),D('drinks','Strongbow'),D('drinks','Twisted Tea'),D('drinks','Clamato'),
-        D('drinks','Pepper'),D('drinks','Pepper Zero'),D('drinks','Canada Dry'),D('drinks','Crush'),
-        D('drinks','Nestea'),D('drinks','Cola'),D('drinks','Coke Zero'),D('drinks','Diet'),D('drinks','Sprite'),
-        D('supplies','Lids 24 transparent','Lids 24 transparent'),
-        D('supplies','Lids 24 normal','Lids 24 normal')
+        D('sheet','Pretzels','Pretzels','Slush Puppie king size · each')
       ],
-      wasteText:'Waste:\nPretzels: \nDogs: \n',orderText:'Ordering:\n',v:5,tasks:defTasks(),notes:'',orderDate:tomorrow(),edit:false
+      wasteText:'Waste:\nPretzels: \nDogs: \n',orderText:'Ordering:\n',v:6,tasks:defTasks(),notes:'',orderDate:tomorrow(),edit:false
     };
   }
   function load(){
@@ -254,13 +247,13 @@ textarea.field{height:auto;min-height:50vh;padding:12px;line-height:1.5;resize:v
     try{
       var s=JSON.parse(localStorage.getItem(KEY)||'null');
       if(s&&Array.isArray(s.items)){
-        if(s.v===5){d.items=s.items}else{
+        if(s.v===6){d.items=s.items}else{
           var oldItems=s.items;
           d.items=d.items.filter(function(n){return n.g==='sheet'}).map(function(n){
             var o=oldItems.find(function(x){return x.g==='sheet'&&x.k===n.k});
             if(o){n.f=o.f;n.m=o.m||'';n.b=o.b}
             return n;
-          }).concat(oldItems.filter(function(x){return x.g==='sheet'&&x.k!=='Chicken'&&x.k!=='Blueberry'&&!d.items.some(function(n){return n.g==='sheet'&&n.k===x.k})}),oldItems.filter(function(x){return x.g!=='sheet'}));
+          }).concat(oldItems.filter(function(x){return x.g==='sheet'&&x.k!=='Chicken'&&x.k!=='Blueberry'&&!d.items.some(function(n){return n.g==='sheet'&&n.k===x.k})}));
         }
         d.waste=Array.isArray(s.waste)?s.waste:[];
         d.orders=Array.isArray(s.orders)?s.orders:[];
