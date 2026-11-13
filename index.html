@@ -306,6 +306,7 @@ h1{min-width:0;overflow-wrap:anywhere}
         d.notes=typeof s.notes==='string'?s.notes:'';
         if(s.orderDate)d.orderDate=s.orderDate;
         d.mode=s.mode==='out'?'out':'in';
+        if(s.pz1)d.pz1=true;
         if(s.temps&&typeof s.temps==='object'){['fo','fc','zo','zc'].forEach(function(k){if(typeof s.temps[k]==='string')d.temps[k]=s.temps[k]})}
         if(Array.isArray(s.tasks))d.tasks=s.tasks;
         if(typeof s.wasteText==='string')d.wasteText=s.wasteText;
@@ -316,6 +317,12 @@ h1{min-width:0;overflow-wrap:anywhere}
     return d;
   }
   var S=load();
+  /* Pizza stand: one-time removal of items it does not sell */
+  if(curStand.id==='pizza'&&!S.pz1){
+    var drop=['Pretzels','Dogs','Original','Poppacorn'];
+    S.items=S.items.filter(function(i){return drop.indexOf(i.k)<0});
+    S.pz1=true;
+  }
   function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
   function g(i,k){return (S.mode==='out'?i['o'+k]:i[k])||''}
   function tot(i){var f=g(i,'f'),m=g(i,'m'),b=g(i,'b');if(f===''&&m===''&&b==='')return null;return (+f||0)+(+m||0)+(+b||0)}
